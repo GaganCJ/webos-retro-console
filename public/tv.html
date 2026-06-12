@@ -2,72 +2,90 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Web Console - NES Mainframe</title>
+    <title>Retro Web Console - Dynamic Matrix</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsnes/1.2.1/jsnes.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body {
-            background-color: #0b0c10;
-            color: #66fcf1;
-            font-family: 'Press Start 2P', monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-image: radial-gradient(#1f2833 1px, transparent 0);
-            background-size: 20px 20px;
+            background-color: #08090d; color: #66fcf1; font-family: 'Press Start 2P', monospace;
+            margin: 0; padding: 20px; height: 100vh; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
         }
+        .workspace-grid {
+            display: grid; grid-template-columns: 1fr 360px; grid-template-rows: 180px 1fr 140px;
+            gap: 20px; width: 100%; height: 100%; max-width: 1400px; max-height: 850px;
+        }
+        .panel {
+            background: #12131c; border: 3px solid #1f2235; border-radius: 8px;
+            padding: 15px; box-sizing: border-box; position: relative; overflow: hidden;
+        }
+        .panel-title { font-size: 10px; color: #4e5166; margin-bottom: 12px; text-transform: uppercase; }
+        
+        /* Game Screen Sizing Configuration */
+        .game-output-panel { grid-column: 1; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: center; justify-content: center; border-color: #45f3ff; }
+        .canvas-frame { background: #000; border: 6px solid #090a0f; border-radius: 4px; }
+        #nes-canvas { width: 640px; height: 600px; display: block; }
 
-        h1 {
-            font-size: 20px;
-            color: #fff;
-            text-shadow: 0 0 10px #ff4a5a;
-            margin-bottom: 20px;
-        }
+        /* QR Frame Rendering Block */
+        .qr-panel { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-color: #ff4a5a; }
+        #qrcode-container { padding: 6px; background: #fff; border-radius: 4px; display: block; }
+        #qrcode-container img { display: block; }
 
-        .console-container {
-            background: #1f2833;
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(0, 242, 254, 0.2);
-            border: 4px solid #45f3ff;
-        }
+        /* Directory System Layout */
+        .games-list-panel { grid-column: 2; grid-row: 2; }
+        .game-item { background: #1c1d2a; border: 2px solid #2d3047; padding: 12px; border-radius: 4px; font-size: 10px; color: #fff; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .game-item.active { border-color: #00f2fe; color: #00f2fe; }
 
-        /* Scaled to display native 256x240 layout smoothly */
-        #nes-canvas {
-            width: 512px;
-            height: 480px; 
-            background: #000;
-            border: 4px solid #0f1115;
-            border-radius: 4px;
-            display: block;
-        }
-
-        .status-bar {
-            margin-top: 20px;
-            font-size: 10px;
-            color: #ff4a5a;
-            text-shadow: 0 0 5px #ff4a5a;
-        }
+        /* Real-time Connection Interceptor UI */
+        .status-panel { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+        .player-status { font-size: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: #2c1619; border: 2px solid #ff4a5a; }
+        
+        /* Active Connected Neon States */
+        .status-indicator.online { background: #00f2fe; border-color: #45f3ff; box-shadow: 0 0 10px #00f2fe; }
+        #sys-log { font-size: 8px; color: #4e5166; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
 
-    <h1>NES CONSOLE ENGINE</h1>
-    
-    <div class="console-container">
-        <canvas id="nes-canvas" width="256" height="240"></canvas>
+    <div class="workspace-grid">
+        <div class="panel game-output-panel">
+            <div class="panel-title" style="align-self: flex-start;">[01] EMULATOR OUTPUT CONTAINER</div>
+            <div class="canvas-frame">
+                <canvas id="nes-canvas" width="256" height="240"></canvas>
+            </div>
+        </div>
+
+        <div class="panel qr-panel">
+            <div class="panel-title">[02] DYNAMIC QR ACCESS PORT</div>
+            <div id="qrcode-container"></div>
+        </div>
+
+        <div class="panel games-list-panel">
+            <div class="panel-title">[03] AVAILABILITY INVENTORY</div>
+            <div class="game-item active"><span>▶</span><span>mario.nes</span></div>
+        </div>
+
+        <div class="panel status-panel">
+            <div class="panel-title">[04] CONNECTION MATRIX SLOTS</div>
+            <div class="player-status">
+                <span>P1: <span id="p1-name" style="color:#ff4a5a;">OFFLINE</span></span>
+                <div class="status-indicator" id="p1-indicator"></div>
+            </div>
+            <div class="player-status">
+                <span>P2: <span id="p2-name" style="color:#ff4a5a;">OFFLINE</span></span>
+                <div class="status-indicator" id="p2-indicator"></div>
+            </div>
+            <div id="sys-log">SYS: CONNECTING CORE HOST...</div>
+        </div>
     </div>
 
-    <div class="status-bar" id="network-log">BOOT INTEGRATION INITIALIZED...</div>
-
     <script>
-        const logDiv = document.getElementById('network-log');
+        const logDiv = document.getElementById('sys-log');
         const canvas = document.getElementById('nes-canvas');
         
-        // Setup JSNES pipeline tracking and drawing loops
+        // JSNES Buffer Allocation Blueprint
         const ctx = canvas.getContext("2d");
         const imageData = ctx.createImageData(256, 240);
         const buf = new ArrayBuffer(imageData.data.length);
@@ -79,72 +97,84 @@
                 let i = 0;
                 for (let y = 0; y < 240; y++) {
                     for (let x = 0; x < 256; x++) {
-                        buf32[i] = buffer[i] | 0xff000000;
-                        i++;
+                        buf32[i] = buffer[i] | 0xff000000; i++;
                     }
                 }
-                imageData.data.set(buf8);
-                ctx.putImageData(imageData, 0, 0);
+                imageData.data.set(buf8); ctx.putImageData(imageData, 0, 0);
             }
         });
 
-        // Translate network codes to JSNES controller memory bits
         const nesButtonMap = {
-            'A': jsnes.Controller.BUTTON_A,         // Mario Jumps
-            'B': jsnes.Controller.BUTTON_B,         // Mario Runs / Attacks
-            'UP': jsnes.Controller.BUTTON_UP,
-            'DOWN': jsnes.Controller.BUTTON_DOWN,
-            'LEFT': jsnes.Controller.BUTTON_LEFT,
-            'RIGHT': jsnes.Controller.BUTTON_RIGHT
+            'A': jsnes.Controller.BUTTON_A, 'B': jsnes.Controller.BUTTON_B,
+            'UP': jsnes.Controller.BUTTON_UP, 'DOWN': jsnes.Controller.BUTTON_DOWN,
+            'LEFT': jsnes.Controller.BUTTON_LEFT, 'RIGHT': jsnes.Controller.BUTTON_RIGHT
         };
 
         const socket = new WebSocket(`ws://${window.location.host}`);
 
         socket.onopen = () => {
-            logDiv.innerText = "SYS STATUS: CONTROLLER BRIDGE CONNECTED.";
             socket.send(JSON.stringify({ type: 'REGISTER_TV' }));
-            loadMarioROM();
         };
 
         socket.onmessage = (event) => {
             const msg = JSON.parse(event.data);
-            const targetButton = nesButtonMap[msg.button];
-            
-            if (targetButton !== undefined) {
-                if (msg.action === 'DOWN') {
-                    nes.buttonDown(1, targetButton);
+
+            // Interface Frame Routing A: Extract Server Network Address Parameters & Build QR
+            if (msg.type === 'SYSTEM_CONFIG') {
+                document.getElementById("qrcode-container").innerHTML = ""; // Clear loader stub
+                new QRCode(document.getElementById("qrcode-container"), {
+                    text: msg.connectUrl,
+                    width: 100, height: 100,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                logDiv.innerText = `SYS: Target link initialized -> ${msg.connectUrl}`;
+                loadMarioROM();
+            }
+
+            // Interface Frame Routing B: Update Connection Indicators in Real-Time
+            if (msg.type === 'PLAYER_STATUS_UPDATE') {
+                const p1Ind = document.getElementById('p1-indicator');
+                const p1Txt = document.getElementById('p1-name');
+                const p2Ind = document.getElementById('p2-indicator');
+                const p2Txt = document.getElementById('p2-name');
+
+                if (msg.p1Connected) {
+                    p1Ind.classList.add('online'); p1Txt.innerText = "CONNECTED (PHONE)"; p1Txt.style.color = "#00f2fe";
                 } else {
-                    nes.buttonUp(1, targetButton);
+                    p1Ind.classList.remove('online'); p1Txt.innerText = "OFFLINE"; p1Txt.style.color = "#ff4a5a";
+                }
+
+                if (msg.p2Connected) {
+                    p2Ind.classList.add('online'); p2Txt.innerText = "CONNECTED (PHONE)"; p2Txt.style.color = "#00f2fe";
+                } else {
+                    p2Ind.classList.remove('online'); p2Txt.innerText = "OFFLINE"; p2Txt.style.color = "#ff4a5a";
+                }
+            }
+
+            // Interface Frame Routing C: Input Mapping Commands Passed into Core Execution Port 1
+            if (msg.button !== undefined) {
+                const targetButton = nesButtonMap[msg.button];
+                if (targetButton !== undefined) {
+                    if (msg.action === 'DOWN') {
+                        nes.buttonDown(1, targetButton);
+                    } else {
+                        nes.buttonUp(1, targetButton);
+                    }
                 }
             }
         };
 
-        function frameLoop() {
-            requestAnimationFrame(frameLoop);
-            nes.frame();
-        }
+        function frameLoop() { requestAnimationFrame(frameLoop); nes.frame(); }
 
         function loadMarioROM() {
-            logDiv.innerText = "RETRIEVING ARTIFACT: INTERCEPTING MARIO.NES...";
             fetch('/mario.nes')
-                .then(response => {
-                    if (!response.ok) throw new Error("ROM data vector missing from /public folder.");
-                    return response.arrayBuffer();
-                })
+                .then(res => { if (!res.ok) throw new Error(); return res.arrayBuffer(); })
                 .then(buffer => {
-                    let bytes = new Uint8Array(buffer);
-                    let romData = "";
-                    for (let i = 0; i < bytes.length; i++) {
-                        romData += String.fromCharCode(bytes[i]);
-                    }
-                    nes.loadROM(romData);
-                    frameLoop();
-                    logDiv.innerText = "GAME SYSTEM RUNNING: SUPER MARIO BROS";
-                })
-                .catch(err => {
-                    logDiv.innerText = `FATAL EXCEPTION: ${err.message}`;
-                    console.error(err);
-                });
+                    let bytes = new Uint8Array(buffer); let romData = "";
+                    for (let i = 0; i < bytes.length; i++) { romData += String.fromCharCode(bytes[i]); }
+                    nes.loadROM(romData); frameLoop();
+                    logDiv.innerText = "SYS: ACTIVE GAMEWAY RUNNING -> MARIO";
+                }).catch(() => { logDiv.innerText = "FATAL: PLACE MARIO.NES INTO PUBLIC DIR"; });
         }
     </script>
 </body>
