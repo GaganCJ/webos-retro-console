@@ -499,14 +499,15 @@
             
             // STEP 4: Audio Locking Parameters & UI Restriction Flags
             window.EJS_volume = 1.0; 
-            window.EJS_Buttons = { 
-                volume: false, // Explicitly hide volume UI slider
-                mute: false,   // Explicitly hide the mute toggle button
-                fullscreen: false,     // Explicitly hide fullscreen button
-                settings: false,       // Hide the main graphical Settings button
-                saveState: false,      // Hide Quick Save State button
-                loadState: false,      // Hide Quick Load State button
-            };
+            window.EJS_startVolume = 100; // Forces backend node to max volume capacity [cite: 2096, 2135]
+
+            // 3. CORRECT API FOR UI EXCLUSIONS (Must be a string array)
+            // This strips the volume slider and option menus off the layout entirely
+            window.EJS_hidedButtons = ['volume', 'settings', 'fullscreen', 'mute', 'saveState', 'loadState']; 
+
+            // 4. State Management Toggles
+            window.EJS_stateSave = true; // Exposes state snapshot protocols [cite: 2112, 2174]
+            window.EJS_stateLoad = true;
 
             window.EJS_startOnLoaded = true;
 
