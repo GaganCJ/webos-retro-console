@@ -5,15 +5,15 @@ const ApplicationState = {
     current: 'LOBBY', // 'LOBBY' | 'GAMEPLAY'
     isMenuOpen: false,
     isExiting: false,
-    
-    enterGameplay: async function(game) {
+
+    enterGameplay: async function (game) {
         this.current = 'GAMEPLAY';
         this.isMenuOpen = false;
         this.isExiting = false;
-        
+
         document.getElementById('lobby-view').style.display = 'none';
         document.getElementById('gameplay-view').style.display = 'flex';
-        
+
         const bgm = document.getElementById('lobby-audio');
         if (bgm) {
             bgm.muted = true;
@@ -25,24 +25,24 @@ const ApplicationState = {
         if (typeof window.socket !== 'undefined' && window.socket && window.socket.readyState === WebSocket.OPEN) {
             window.socket.send(JSON.stringify({ type: 'TV_STATE_CHANGE', state: 'GAMEPLAY', core: game.console, layout: game.layout }));
         }
-        
+
         loadROM(game);
     },
 
     // State Machine Tear-Down Protocol
-    exitGameplay: function() {
+    exitGameplay: function () {
         if (this.isExiting) return;
         this.isExiting = true;
 
         if (window.Module) {
-            try { window.Module.retroArchSend("QUIT"); } catch (e) {}
+            try { window.Module.retroArchSend("QUIT"); } catch (e) { }
         }
 
         this.current = 'LOBBY';
-        
+
         document.getElementById('gameplay-view').style.display = 'none';
         document.getElementById('lobby-view').style.display = 'flex';
-        
+
         window.onbeforeunload = null;
 
         // A full page reload is the most robust and reliable method to completely
@@ -59,7 +59,7 @@ function playLobbyMusic() {
     if (!bgm) return;
     if (ApplicationState.current !== 'LOBBY') return;
     if (!bgm.hasAttribute('src')) return; // Prevent playing if the source was destroyed
-    
+
     bgm.volume = 0.3; // 30% volume
     const playPromise = bgm.play();
     if (playPromise !== undefined) {
@@ -124,13 +124,13 @@ function removeGamepad(index) {
 }
 
 function processControllerInput(player, button, action) {
-    if (ApplicationState.current !== 'GAMEPLAY') return; 
+    if (ApplicationState.current !== 'GAMEPLAY') return;
 
     const gamepadIndex = player - 1;
     const pad = getOrCreateGamepad(gamepadIndex);
     const isSelectPressed = pad && pad.buttons[gamepadMap['SELECT']] && pad.buttons[gamepadMap['SELECT']].pressed;
     const isStartPressed = pad && pad.buttons[gamepadMap['START']] && pad.buttons[gamepadMap['START']].pressed;
-        
+
     // 1. MENU Button Logic (Toggle Quick Menu)
     if (button === 'MENU' && action === 'DOWN') {
         if (isSelectPressed) {
@@ -282,13 +282,13 @@ function completeFSInitialization(afsInstance) {
 
         // Create required directory structures using Node-like API
         const fs = BrowserFS.BFSRequire('fs');
-        try { fs.mkdirSync('/home'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user/retroarch'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user/retroarch/cores'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user/retroarch/userdata'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user/retroarch/userdata/saves'); } catch (e) {}
-        try { fs.mkdirSync('/home/web_user/retroarch/userdata/states'); } catch (e) {}
+        try { fs.mkdirSync('/home'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user/retroarch'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user/retroarch/cores'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user/retroarch/userdata'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user/retroarch/userdata/saves'); } catch (e) { }
+        try { fs.mkdirSync('/home/web_user/retroarch/userdata/states'); } catch (e) { }
 
         resolve(safeAfs);
     });
@@ -321,7 +321,7 @@ function writeConfig(consoleType) {
     const BrowserFS = window.BrowserFS;
     const fs = BrowserFS.BFSRequire('fs');
     const BufferClass = BrowserFS.BFSRequire('buffer').Buffer;
-    
+
     // WebOS TV-optimized configurations for 2D Sprite consoles (NES, SNES, Genesis)
     const cfgContent = `
 savefile_directory = "/home/web_user/retroarch/userdata/saves"
@@ -338,6 +338,7 @@ rewind_enable = "false"
 run_ahead_enabled = "false"
 video_max_swapchain_images = "2"
 video_aspect_ratio_auto = "true"
+video_scale_integer = "true"
     `;
 
     const optionsContent = `
@@ -350,7 +351,7 @@ picodrive_audio_filter = "disabled"
 picodrive_overclock = "disabled"
 picodrive_drc = "enabled"
     `;
-    
+
     const encoded = new TextEncoder().encode(cfgContent.trim());
     fs.writeFileSync('/home/web_user/retroarch/userdata/retroarch.cfg', BufferClass(encoded));
 
@@ -370,7 +371,7 @@ function writeROM(filename, arrayBuffer) {
 async function loadROM(game) {
     const gamePanel = document.getElementById('game-panel');
     if (!gamePanel) return;
-    
+
     // Display Retro console styled clean loading indicator
     gamePanel.innerHTML = `
         <div id="retroarch-loader" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0b0e14; color: #00a8e1; font-family: 'Press Start 2P', monospace; font-size: 12px; gap: 20px;">
@@ -422,36 +423,36 @@ async function loadROM(game) {
 
         const localModule = {
             noInitialRun: true,
-            retroArchSend: function(msg) {
+            retroArchSend: function (msg) {
                 if (typeof this.EmscriptenSendCommand === 'function') {
                     this.EmscriptenSendCommand(msg);
                 } else {
                     console.warn("[RetroArch] EmscriptenSendCommand is not compiled in this core");
                 }
             },
-            retroArchRecv: function() {
+            retroArchRecv: function () {
                 return this.EmscriptenReceiveCommandReply ? this.EmscriptenReceiveCommandReply() : null;
             },
-            retroArchExit: function(core, content) {
+            retroArchExit: function (core, content) {
                 ApplicationState.exitGameplay();
             },
-            onRuntimeInitialized: function() {
+            onRuntimeInitialized: function () {
                 // runtime ready
             },
-            print: function(text) {
+            print: function (text) {
                 // suppress RetroArch stdout logs for performance
             },
-            printErr: function(text) {
+            printErr: function (text) {
                 // suppress RetroArch stderr logs for performance
             },
             canvas: canvas,
             parent: canvas.parentNode,
             arguments: [romPath, "-c", "/home/web_user/retroarch/userdata/retroarch.cfg"],
             corePath: `/home/web_user/retroarch/cores/${core}_libretro.core`,
-            preRun: [function(mod) {
+            preRun: [function (mod) {
                 mod.ENV["LIBRARY_PATH"] = `/home/web_user/retroarch/cores/${core}_libretro.core`;
             }],
-            locateFile: function(path, prefix) {
+            locateFile: function (path, prefix) {
                 if (path.endsWith(".wasm")) {
                     return `/cores/${path}?cb=${Date.now()}`;
                 }
