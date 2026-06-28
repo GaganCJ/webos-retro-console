@@ -10,7 +10,7 @@ let tvCore = 'NES';
 let tvLayout = null;
 
 const SYSTEM_IP = getLocalIPAddress();
-const CONTROLLER_URL = `${SYSTEM_IP}`;
+const CONTROLLER_URL = `http://${SYSTEM_IP}:${PORT}/controller.html`;
 
 function dispatchPlayerStatusToTV() {
     if (tvSocket && tvSocket.readyState === 1) {
@@ -91,6 +91,31 @@ export function initializeWebSocket(server) {
                         console.error("QR Code Generation Error:", err);
                     }
                     dispatchPlayerStatusToTV();
+                }
+
+                if (data.type === 'REGISTER_CONTROLLER') {
+                    const chosenName = data.nickname ? data.nickname.trim().toUpperCase() : '';
+                    
+                    if (!p1Socket) {
+                        p1Socket = socket;
+                        socket.playerIndex = 1;
+                        socket.nickname = chosenName || 'PLAYER 1';
+                        socket.send(JSON.stringify({ type: 'ASSIGNMENT_CONFIRM', slot: socket.nickname, playerIndex: 1 }));
+                        socket.send(JSON.stringify({ type: 'TV_STATE_CHANGE', state: tvState, core: tvCore, layout: tvLayout }));
+                        console.log(`📱 ${socket.nickname} claimed Player 1 Slot (Web).`);
+                        dispatchPlayerStatusToTV();
+                    } else if (!p2Socket) {
+                        p2Socket = socket;
+                        socket.playerIndex = 2;
+                        socket.nickname = chosenName || 'PLAYER 2';
+                        socket.send(JSON.stringify({ type: 'ASSIGNMENT_CONFIRM', slot: socket.nickname, playerIndex: 2 }));
+                        socket.send(JSON.stringify({ type: 'TV_STATE_CHANGE', state: tvState, core: tvCore, layout: tvLayout }));
+                        console.log(`📱 ${socket.nickname} claimed Player 2 Slot (Web).`);
+                        dispatchPlayerStatusToTV();
+                    } else {
+                        socket.send(JSON.stringify({ type: 'ASSIGNMENT_CONFIRM', slot: 'SPECTATOR', playerIndex: 0 }));
+                        socket.send(JSON.stringify({ type: 'TV_STATE_CHANGE', state: tvState, core: tvCore, layout: tvLayout }));
+                    }
                 }
 
                 if (data.type === 'TV_STATE_CHANGE' && socket === tvSocket) {

@@ -82,20 +82,45 @@ if (isController) {
         window.location.reload(); // Clean reset back to the gateway screen
     };
 
+    let lastState = 0;
+    
+    const BIT_TO_CODE = {
+        1: 1,      // UP
+        2: 2,      // DOWN
+        4: 3,      // LEFT
+        8: 4,      // RIGHT
+        16: 5,     // A
+        32: 6,     // B
+        64: 7,     // X
+        128: 8,    // Y
+        4096: 9,   // START
+        8192: 10,  // SELECT
+        16384: 11, // MENU
+        32768: 12  // PAUSE
+    };
+
     window.transmitState = function(state) {
         if (myPlayerIndex === 0) return; // Spectators do not flood the network
 
-        // Pack the player index and the 16-bit state into a 3-byte payload.
-        // Byte 0: Player Index (1 or 2)
-        // Byte 1: Low byte of 16-bit state
-        // Byte 2: High byte of 16-bit state
-        const payload = new Uint8Array(3);
-        payload[0] = myPlayerIndex;
-        payload[1] = state & 0xFF;
-        payload[2] = (state >> 8) & 0xFF;
+        const changed = state ^ lastState;
+        if (changed !== 0) {
+            for (const mask in BIT_TO_CODE) {
+                const numericMask = parseInt(mask, 10);
+                if (changed & numericMask) {
+                    const buttonCode = BIT_TO_CODE[numericMask];
+                    const isPressed = (state & numericMask) > 0;
+                    const actionPhase = isPressed ? 1 : 2; // 1 = down, 2 = up
 
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(payload);
+                    const payload = new Uint8Array(2);
+                    payload[0] = actionPhase;
+                    payload[1] = buttonCode;
+
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(payload);
+                    }
+                }
+            }
+            lastState = state;
         }
     };
 } else {
