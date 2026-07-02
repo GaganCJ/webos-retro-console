@@ -3,7 +3,8 @@ import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
-import { PORT, getLocalIPAddress } from './src/config/network.js';
+
+const PORT = 3000;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -88,12 +89,9 @@ app.get('/api/games', async (req, res) => {
     }
 });
 
-const SYSTEM_IP = getLocalIPAddress();
-
 server.listen(PORT, () => {
     console.log(`\n🕹️  ================================================ 🕹️`);
-    console.log(`🚀 PRODUCTION-READY INTEGRATION HOOKS STANDING BY:`);
+    console.log(`🚀 PRODUCTION-READY RETRO VIRTUAL CONSOLE STANDING BY:`);
     console.log(`🖥️  Console Main Frame View:  http://localhost:${PORT}/tv.html`);
-    console.log(`📱 Target Mobile Link Host:  ${SYSTEM_IP}:${PORT}`);
     console.log(`🕹️  ================================================ 🕹️\n`);
 });

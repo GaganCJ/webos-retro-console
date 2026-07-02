@@ -22,10 +22,6 @@ const ApplicationState = {
             bgm.removeAttribute('src'); // Completely destroy the audio source to guarantee silence
         }
 
-        if (typeof window.socket !== 'undefined' && window.socket && window.socket.readyState === WebSocket.OPEN) {
-            window.socket.send(JSON.stringify({ type: 'TV_STATE_CHANGE', state: 'GAMEPLAY', core: game.console, layout: game.layout }));
-        }
-        
         loadROM(game);
     },
 
