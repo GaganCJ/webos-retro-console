@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
-import { initializeWebSocket } from './src/network/websocket.js';
 import { PORT, getLocalIPAddress } from './src/config/network.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,8 +87,6 @@ app.get('/api/games', async (req, res) => {
         else res.status(500).json({ error: 'Failed to scan ROMs directory' });
     }
 });
-
-initializeWebSocket(server);
 
 const SYSTEM_IP = getLocalIPAddress();
 

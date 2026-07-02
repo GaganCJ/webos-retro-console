@@ -170,7 +170,7 @@ body {
     overflow: hidden;
 }
 
-.game-card:hover {
+.game-card:hover, .game-card.active {
     transform: scale(1.05);
     border-color: #00a8e1;
 }

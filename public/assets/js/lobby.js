@@ -50,14 +50,19 @@ function sortLibrary(criterion) {
     updateHeroSpotlight(libraryData[0]); // Instantly push the first game's metadata to the Hero block
 }
 
+let activeGameIndex = 0;
+
 function renderLibraryList() {
     const rowsDeck = document.getElementById('game-rows');
     if (!rowsDeck) return;
     rowsDeck.innerHTML = '';
     
-    libraryData.forEach(game => {
+    libraryData.forEach((game, index) => {
         const item = document.createElement('div');
         item.className = 'game-card';
+        if (index === activeGameIndex) {
+            item.classList.add('active');
+        }
         
         if (game.image) {
             item.innerHTML = `
@@ -68,7 +73,10 @@ function renderLibraryList() {
             item.innerHTML = `<div style="padding: 10px;">${game.title}</div>`;
         }
         // Magic Remote Hover Interaction
-        item.onmouseenter = () => updateHeroSpotlight(game);
+        item.onmouseenter = () => {
+            activeGameIndex = index;
+            highlightActiveGameCard();
+        };
         item.onclick = () => {
             if (typeof ApplicationState !== 'undefined') {
                 ApplicationState.enterGameplay(game);
@@ -78,12 +86,51 @@ function renderLibraryList() {
     });
 }
 
+function highlightActiveGameCard() {
+    const cards = document.querySelectorAll('.game-card');
+    cards.forEach((card, index) => {
+        if (index === activeGameIndex) {
+            card.classList.add('active');
+            updateHeroSpotlight(libraryData[index]);
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } else {
+            card.classList.remove('active');
+        }
+    });
+}
+
+function navigateLobby(direction) {
+    if (libraryData.length === 0) return;
+    activeGameIndex = (activeGameIndex + direction + libraryData.length) % libraryData.length;
+    highlightActiveGameCard();
+}
+
+function launchActiveGame() {
+    if (libraryData.length === 0) return;
+    if (typeof ApplicationState !== 'undefined') {
+        ApplicationState.enterGameplay(libraryData[activeGameIndex]);
+    }
+}
+
 function scrollDeck(direction) {
     const rowsDeck = document.getElementById('game-rows');
     if (!rowsDeck) return;
     const scrollAmount = 520; // Scroll past roughly two game cards at a time
     rowsDeck.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 }
+
+// Bind keyboard navigation in Lobby
+document.addEventListener('keydown', (e) => {
+    if (typeof ApplicationState !== 'undefined' && ApplicationState.current === 'LOBBY') {
+        if (e.key === 'ArrowLeft') {
+            navigateLobby(-1);
+        } else if (e.key === 'ArrowRight') {
+            navigateLobby(1);
+        } else if (e.key === 'Enter' || e.key === 'z' || e.key === 'KeyZ') {
+            launchActiveGame();
+        }
+    }
+});
 
 // Bind load event to initialize library
 window.addEventListener('load', initializeLibrary);

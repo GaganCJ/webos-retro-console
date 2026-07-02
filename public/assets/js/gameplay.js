@@ -69,16 +69,7 @@ function playLobbyMusic() {
     }
 }
 
-function openQrModal() {
-    const qrContainer = document.getElementById("qrcode-container");
-    if (qrContainer && typeof qrCodeDataUrl !== 'undefined' && qrCodeDataUrl) {
-        qrContainer.innerHTML = `<img src="${qrCodeDataUrl}" alt="Controller URL" style="display: block;">`;
-    }
-    const overlay = document.getElementById('qr-modal-overlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-    }
-}
+
 
 // 🎮 RAW KEYBOARD EVENT ROUTER & CUSTOM MENU CONTROLLER 🎮
 
@@ -361,10 +352,149 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Mock gamepad functions for compatibility
-function getOrCreateGamepad(index) { return null; }
-function removeGamepad(index) {}
-function processControllerInput(player, button, action) {}
+// --- REAL 2.4G PHYSICAL GAMEPAD CONTROLLERS SUPPORT ---
+const lastGamepadStates = {
+    1: Array(17).fill(false),
+    2: Array(17).fill(false)
+};
+const lastGamepadAxes = {
+    1: [0, 0], // Left Stick X, Left Stick Y
+    2: [0, 0]
+};
+
+const GAMEPAD_BUTTON_MAPPING = {
+    0: 5,  // A / Cross -> Code 5 (Z / RetroArch B)
+    1: 6,  // B / Circle -> Code 6 (X / RetroArch A)
+    2: 7,  // X / Square -> Code 7 (A / RetroArch Y)
+    3: 8,  // Y / Triangle -> Code 8 (S / RetroArch X)
+    4: 11, // L1 -> Code 11 (MENU)
+    5: 12, // R1 -> Code 12 (PAUSE)
+    8: 10, // Select -> Code 10 (SELECT)
+    9: 9,  // Start -> Code 9 (START)
+    12: 1, // D-pad Up -> Code 1 (UP)
+    13: 2, // D-pad Down -> Code 2 (DOWN)
+    14: 3, // D-pad Left -> Code 3 (LEFT)
+    15: 4, // D-pad Right -> Code 4 (RIGHT)
+    16: 11 // Home -> Code 11 (MENU)
+};
+
+function triggerVirtualGamepadBtn(playerIndex, actionPhase, buttonCode) {
+    const payload = new Uint8Array(3);
+    payload[0] = playerIndex;
+    payload[1] = actionPhase;
+    payload[2] = buttonCode;
+    handleIncomingInputPacket(payload);
+}
+
+function processAnalogAxis(playerIndex, axisIndex, value, negativeBtnCode, positiveBtnCode) {
+    const lastStates = lastGamepadAxes[playerIndex];
+    let prevVal = lastStates[axisIndex]; // -1, 1, 0
+
+    let newVal = 0;
+    if (value < -0.5) newVal = -1;
+    else if (value > 0.5) newVal = 1;
+
+    if (newVal !== prevVal) {
+        // Release previous state
+        if (prevVal === -1) {
+            triggerVirtualGamepadBtn(playerIndex, 2, negativeBtnCode);
+        } else if (prevVal === 1) {
+            triggerVirtualGamepadBtn(playerIndex, 2, positiveBtnCode);
+        }
+
+        // Press new state
+        if (newVal === -1) {
+            triggerVirtualGamepadBtn(playerIndex, 1, negativeBtnCode);
+        } else if (newVal === 1) {
+            triggerVirtualGamepadBtn(playerIndex, 1, positiveBtnCode);
+        }
+
+        lastStates[axisIndex] = newVal;
+    }
+}
+
+function pollGamepadsLoop() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const activeGamepads = [];
+    for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i] && gamepads[i].connected) {
+            activeGamepads.push(gamepads[i]);
+        }
+    }
+
+    for (let playerIndex = 1; playerIndex <= 2; playerIndex++) {
+        const gamepad = activeGamepads[playerIndex - 1];
+        if (gamepad) {
+            // Process standard buttons
+            for (const btnIndexStr in GAMEPAD_BUTTON_MAPPING) {
+                const btnIndex = parseInt(btnIndexStr, 10);
+                const buttonCode = GAMEPAD_BUTTON_MAPPING[btnIndex];
+                
+                const pressed = gamepad.buttons[btnIndex] && gamepad.buttons[btnIndex].pressed;
+                const lastState = lastGamepadStates[playerIndex][btnIndex];
+                
+                if (pressed !== lastState) {
+                    lastGamepadStates[playerIndex][btnIndex] = pressed;
+                    triggerVirtualGamepadBtn(playerIndex, pressed ? 1 : 2, buttonCode);
+                }
+            }
+
+            // Process Left Analog Stick axes
+            if (gamepad.axes && gamepad.axes.length >= 2) {
+                processAnalogAxis(playerIndex, 0, gamepad.axes[0], 3, 4); // X -> Left/Right
+                processAnalogAxis(playerIndex, 1, gamepad.axes[1], 1, 2); // Y -> Up/Down
+            }
+        }
+    }
+    requestAnimationFrame(pollGamepadsLoop);
+}
+
+function updateGamepadUI() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const activeGamepads = [];
+    for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i] && gamepads[i].connected) {
+            activeGamepads.push(gamepads[i]);
+        }
+    }
+
+    const p1Connected = activeGamepads.length > 0;
+    const p2Connected = activeGamepads.length > 1;
+
+    updateUIField('p1-chip', 'p1-name', p1Connected, p1Connected ? `P1: GP${activeGamepads[0].index + 1}` : 'P1: OFFLINE');
+    updateUIField('p2-chip', 'p2-name', p2Connected, p2Connected ? `P2: GP${activeGamepads[1].index + 1}` : 'P2: OFFLINE');
+}
+
+function updateUIField(chipId, textId, active, label) {
+    const chip = document.getElementById(chipId);
+    const txt = document.getElementById(textId);
+    if (chip && txt) {
+        txt.innerText = label;
+        if (active) {
+            chip.classList.add('online');
+        } else {
+            chip.classList.remove('online');
+        }
+    }
+}
+
+window.addEventListener("gamepadconnected", (e) => {
+    console.log(`🎮 Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}`);
+    updateGamepadUI();
+});
+
+window.addEventListener("gamepaddisconnected", (e) => {
+    console.log(`🎮 Gamepad disconnected from index ${e.gamepad.index}: ${e.gamepad.id}`);
+    updateGamepadUI();
+});
+
+// Start polling gamepads loop
+requestAnimationFrame(pollGamepadsLoop);
+
+// Initial check on load
+document.addEventListener('DOMContentLoaded', () => {
+    updateGamepadUI();
+});
 
 // BrowserFS File System Persistent Store Bridge
 let afs = null;
@@ -644,8 +774,4 @@ document.body.addEventListener('click', () => {
 // Expose globals for other scripts
 window.ApplicationState = ApplicationState;
 window.playLobbyMusic = playLobbyMusic;
-window.openQrModal = openQrModal;
-window.getOrCreateGamepad = getOrCreateGamepad;
-window.removeGamepad = removeGamepad;
-window.processControllerInput = processControllerInput;
 window.loadROM = loadROM;

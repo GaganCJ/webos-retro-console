@@ -9,7 +9,6 @@
     <link href="/fonts/press-start-2p/index.css" rel="stylesheet">
     <link rel="icon" href="/assets/favicon/favicon32.png" type="image/x-icon">
     <script src="/cores/browserfs.min.js" defer></script>
-    <script src="/assets/js/network.js" defer></script>
     <script src="/assets/js/gameplay.js?v=1.0.7" defer></script>
     <script src="/assets/js/lobby.js" defer></script>
 </head>
@@ -17,6 +16,12 @@
 
     <!-- Background Music -->
     <audio id="lobby-audio" src="/assets/audio/lobby.mp3" loop preload="auto"></audio>
+
+    <!-- Player Gamepad Status HUD -->
+    <div class="player-status-container">
+        <div class="status-chip" id="p1-chip"><div class="indicator"></div> <span id="p1-name">P1: OFFLINE</span></div>
+        <div class="status-chip" id="p2-chip"><div class="indicator"></div> <span id="p2-name">P2: OFFLINE</span></div>
+    </div>
 
     <!-- Lobby View -->
     <div id="lobby-view">
@@ -68,24 +73,10 @@
         </div>
         <div class="system-footer">
             <button class="btn btn-danger" onclick="ApplicationState.exitGameplay()">[EXIT GAME]</button>
-            
-            <div class="player-status-container">
-                <div class="status-chip" id="p1-chip"><div class="indicator"></div> <span id="p1-name">P1: OFFLINE</span></div>
-                <div class="status-chip" id="p2-chip"><div class="indicator"></div> <span id="p2-name">P2: OFFLINE</span></div>
-            </div>
-            
-            <button class="btn" onclick="openQrModal()">[CONTROLLER QR]</button>
         </div>
     </div>
 
-    <!-- Absolute Positioned QR Modal -->
-    <div id="qr-modal-overlay" onclick="this.style.display = 'none';">
-        <div class="qr-modal-box" onclick="event.stopPropagation();">
-            <div style="font-size: 10px; margin-bottom: 15px; color: #00a8e1;">SCAN TO CONNECT</div>
-            <div id="qrcode-container"></div>
-            <button class="btn" style="margin-top: 15px;" onclick="document.getElementById('qr-modal-overlay').style.display = 'none';">CLOSE</button>
-        </div>
-    </div>
+
 
 
 </body>
